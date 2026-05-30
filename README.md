@@ -22,7 +22,7 @@ Tested locally on Apple Silicon:
 | Path | Result |
 |---|---|
 | MLX LM token generation, 2s | 300 pattern steps, 38.85s wall time, output shape `(1, 3, 50)` |
-| MLX LM token generation, 12s | 550 pattern steps, 59.95s wall time, output shape `(1, 3, 300)` |
+| MLX LM token generation, 12s | 550 pattern steps, about 1 minute wall time, output shape `(1, 3, 300)` |
 | Official PyTorch/MPS decoder bridge, 12s | 73.27s wall time |
 | Final 12s FLAC | 48 kHz, stereo, 12.000s, FLAC/PCM16, RMS about `0.163` |
 
@@ -33,7 +33,7 @@ Reference audio for listening:
 ```
 
 Compared with the earlier PyTorch/MPS baseline, the LM token phase dropped from
-roughly 3:52-4:08 for a 12s sample to about 1:00 in this first MLX runtime.
+roughly 3:52-4:08 for a 12s sample to about 1 minute in this first MLX runtime.
 The decoder is not MLX yet.
 
 ## Convert
