@@ -122,8 +122,10 @@ class SongGenerationLM(nn.Module):
         self.cache2 = make_prompt_cache(self.transformer2)
         self.offset = 0
 
-    def load_weights_file(self, path: str | Path) -> None:
-        weights = mx.load(str(path))
+    def load_weights_files(self, paths: list[Path]) -> None:
+        weights = {}
+        for path in paths:
+            weights.update(mx.load(str(path)))
         self.update(tree_unflatten(list(weights.items())))
         mx.eval(self.parameters())
 
@@ -303,8 +305,22 @@ def load_model(model_dir: str | Path) -> tuple[SongGenerationLM, Qwen2Tokenizer,
     quantization = data.get("quantization")
     if quantization:
         model.apply_quantization(bits=int(quantization["bits"]), group_size=int(quantization.get("group_size", 64)))
-    model.load_weights_file(model_dir / "model.safetensors")
+    model.load_weights_files(resolve_weight_files(model_dir, data))
     return model, tokenizer, data
+
+
+def resolve_weight_files(model_dir: Path, metadata: dict[str, Any]) -> list[Path]:
+    if "weight_files" in metadata:
+        return [model_dir / name for name in metadata["weight_files"]]
+    index_path = model_dir / "model.safetensors.index.json"
+    if index_path.exists():
+        index = json.loads(index_path.read_text(encoding="utf-8"))
+        names = sorted(set(index["weight_map"].values()))
+        return [model_dir / name for name in names]
+    shards = sorted(model_dir.glob("model-*-of-*.safetensors"))
+    if shards:
+        return shards
+    return [model_dir / "model.safetensors"]
 
 
 def delayed_pattern_masks(timesteps: int, code_depth: int = 3, delays: list[int] | None = None) -> tuple[mx.array, mx.array]:

@@ -11,6 +11,8 @@ PyTorch Flow1dVAE / separate tokenizer path.
 - `songgeneration_v2_medium` and `songgeneration_v2_large` official PyTorch/MPS baselines have been inspected locally.
 - MLX conversion covers SongGeneration-v2 medium and large language model weights.
 - MLX runtime generates discrete song tokens.
+- Published checkpoints use sharded safetensors to keep individual upload/download
+  objects small and resumable.
 - Full FLAC decoding still uses the official PyTorch decoder as a bridge.
 - The recent-token repetition penalty from the official sampler is required. Without it,
   long generations collapse into repeated tokens and decode close to silence.
@@ -85,6 +87,11 @@ PYTHONPATH=. python scripts/quantize_lm.py \
   --source ./models/SongGeneration-v2-medium-bfloat16 \
   --output ./models/SongGeneration-v2-medium-4bit \
   --bits 4
+
+python scripts/shard_safetensors.py \
+  ./models/SongGeneration-v2-medium-4bit \
+  --max-shard-size 64MiB \
+  --remove-source
 ```
 
 ## Decode Tokens With Official Bridge
