@@ -1,0 +1,16 @@
+[project]
+name = "songgeneration-mlx"
+version = "0.1.0"
+description = "Apple MLX runtime and conversion tools for Tencent SongGeneration."
+requires-python = ">=3.10"
+dependencies = [
+  "mlx>=0.29",
+  "mlx-lm>=0.31",
+  "transformers>=4.38",
+  "pyyaml",
+  "safetensors",
+  "numpy",
+]
+
+[tool.setuptools.packages.find]
+include = ["songgeneration_mlx*"]
