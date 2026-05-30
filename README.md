@@ -2,18 +2,21 @@
 
 Apple MLX runtime and conversion tools for Tencent SongGeneration.
 
-This repository currently targets the heavy autoregressive `audiolm` token generator in
-SongGeneration-v2. The audio decoder is still bridged through the official PyTorch
-Flow1dVAE / separate tokenizer path.
+This repository targets the heavy autoregressive `audiolm` token generator in
+SongGeneration-v2. The audio decoder is still bridged through the official
+PyTorch Flow1dVAE / separate tokenizer path.
 
 ## Status
 
-- `songgeneration_v2_medium` official PyTorch/MPS baseline has been tested locally.
-- MLX conversion covers the SongGeneration-v2 medium language model weights.
+- `songgeneration_v2_medium` and `songgeneration_v2_large` official PyTorch/MPS baselines have been inspected locally.
+- MLX conversion covers SongGeneration-v2 medium and large language model weights.
 - MLX runtime generates discrete song tokens.
 - Full FLAC decoding still uses the official PyTorch decoder as a bridge.
 - The recent-token repetition penalty from the official sampler is required. Without it,
   long generations collapse into repeated tokens and decode close to silence.
+- Public upstream sources checked on 2026-05-31 did not provide downloadable
+  SongGeneration-v2-fast weights. Do not publish a fast MLX checkpoint until a
+  real upstream fast checkpoint is available.
 
 ## Current Validation
 
@@ -26,47 +29,74 @@ Tested locally on Apple Silicon:
 | Official PyTorch/MPS decoder bridge, 12s | 73.27s wall time |
 | Final 12s FLAC | 48 kHz, stereo, 12.000s, FLAC/PCM16, RMS about `0.163` |
 
-Reference audio for listening:
-
-```text
-/Volumes/usb_main/home/index_mlx/SongGeneration-MLX-12s-zh-pop.flac
-```
-
 Compared with the earlier PyTorch/MPS baseline, the LM token phase dropped from
 roughly 3:52-4:08 for a 12s sample to about 1 minute in this first MLX runtime.
 The decoder is not MLX yet.
 
-## Convert
+## Install
 
 ```bash
-/Users/ailuntz/miniforge3/envs/env_songgeneration/bin/python scripts/convert_lm.py \
-  --source /Volumes/usb_main/home/server_llm/experiments_audio_generation/third_party/SongGeneration/songgeneration_v2_medium \
-  --repo /Volumes/usb_main/home/server_llm/experiments_audio_generation/third_party/SongGeneration \
-  --output /Volumes/usb_main/home/index_mlx/models/SongGeneration-v2-medium-MLX \
-  --variant v2-medium
+git clone https://github.com/ailuntx/SongGeneration-MLX.git
+cd SongGeneration-MLX
+python -m venv .venv
+.venv/bin/pip install -e .
+```
+
+## Download MLX Weights
+
+Pick one checkpoint:
+
+```bash
+hf download mlx-community/SongGeneration-v2-medium-4bit --local-dir ./models/SongGeneration-v2-medium-4bit
+hf download mlx-community/SongGeneration-v2-medium-8bit --local-dir ./models/SongGeneration-v2-medium-8bit
+hf download mlx-community/SongGeneration-v2-medium-bfloat16 --local-dir ./models/SongGeneration-v2-medium-bfloat16
+hf download mlx-community/SongGeneration-v2-medium-fp32 --local-dir ./models/SongGeneration-v2-medium-fp32
+
+hf download mlx-community/SongGeneration-v2-large-4bit --local-dir ./models/SongGeneration-v2-large-4bit
+hf download mlx-community/SongGeneration-v2-large-8bit --local-dir ./models/SongGeneration-v2-large-8bit
+hf download mlx-community/SongGeneration-v2-large-bfloat16 --local-dir ./models/SongGeneration-v2-large-bfloat16
+hf download mlx-community/SongGeneration-v2-large-fp32 --local-dir ./models/SongGeneration-v2-large-fp32
 ```
 
 ## Generate Tokens
 
 ```bash
-/Volumes/usb_main/home/server_llm/.venv_eval/bin/python -m songgeneration_mlx.cli \
-  --model /Volumes/usb_main/home/index_mlx/models/SongGeneration-v2-medium-MLX \
+.venv/bin/python -m songgeneration_mlx.cli \
+  --model ./models/SongGeneration-v2-medium-4bit \
   --lyrics "[verse] Hello from MLX. [chorus] Sing it again." \
   --description "Pop, female vocal, bright production, [Musicality-medium]." \
   --duration 2 \
-  --output /Volumes/usb_main/home/index_mlx/runs/SongGeneration-MLX/tokens_2s.npz
+  --top-k 50 \
+  --temperature 0.9 \
+  --output ./tokens_2s.npz
 ```
 
-Use `PYTHONPATH=/Volumes/usb_main/home/index_mlx/project/SongGeneration-MLX` if the package is not installed editable.
+## Convert Locally
+
+```bash
+python scripts/convert_lm.py \
+  --source /path/to/SongGeneration/songgeneration_v2_medium \
+  --repo /path/to/SongGeneration \
+  --output ./models/SongGeneration-v2-medium-bfloat16 \
+  --variant v2-medium \
+  --dtype bfloat16
+
+PYTHONPATH=. python scripts/quantize_lm.py \
+  --source ./models/SongGeneration-v2-medium-bfloat16 \
+  --output ./models/SongGeneration-v2-medium-4bit \
+  --bits 4
+```
 
 ## Decode Tokens With Official Bridge
 
+The bridge still needs the official SongGeneration checkout and runtime assets:
+
 ```bash
 PYTORCH_ENABLE_MPS_FALLBACK=1 SONGGEN_DEVICE=mps \
-/Users/ailuntz/miniforge3/envs/env_songgeneration/bin/python scripts/decode_tokens_official.py \
-  --repo /Volumes/usb_main/home/server_llm/experiments_audio_generation/third_party/SongGeneration \
-  --ckpt-path /Volumes/usb_main/home/server_llm/experiments_audio_generation/third_party/SongGeneration/songgeneration_v2_medium \
-  --tokens /Volumes/usb_main/home/index_mlx/runs/SongGeneration-MLX/tokens_12s_zh_pop_record.npz \
-  --output /Volumes/usb_main/home/index_mlx/runs/SongGeneration-MLX/mlx_tokens_12s_zh_pop_record.flac \
+.venv/bin/python scripts/decode_tokens_official.py \
+  --repo /path/to/SongGeneration \
+  --ckpt-path /path/to/SongGeneration/songgeneration_v2_medium \
+  --tokens ./tokens_2s.npz \
+  --output ./output_2s.flac \
   --device mps
 ```

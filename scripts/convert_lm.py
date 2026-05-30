@@ -17,6 +17,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--repo", required=True, help="Official SongGeneration source code checkout.")
     parser.add_argument("--output", required=True, help="Output MLX model directory.")
     parser.add_argument("--variant", default="v2-medium")
+    parser.add_argument("--dtype", choices=["source", "fp32", "bfloat16"], default="source")
     return parser.parse_args()
 
 
@@ -67,6 +68,12 @@ def main() -> None:
     state = torch.load(source / "model.pt", map_location="cpu", weights_only=False)
     weights = {}
     skipped = []
+    dtype_map = {
+        "source": None,
+        "fp32": torch.float32,
+        "bfloat16": torch.bfloat16,
+    }
+    target_dtype = dtype_map[args.dtype]
     for key, value in state.items():
         new_key = map_key(key)
         if new_key is None:
@@ -74,6 +81,8 @@ def main() -> None:
             continue
         if not torch.is_tensor(value):
             continue
+        if target_dtype is not None and value.is_floating_point():
+            value = value.to(target_dtype)
         weights[new_key] = value.contiguous()
 
     save_file(weights, output / "model.safetensors")
@@ -94,6 +103,7 @@ def main() -> None:
         "source": "tencent/SongGeneration",
         "official_code": "https://github.com/tencent-ailab/songgeneration",
         "variant": args.variant,
+        "precision": args.dtype,
         "runtime": {
             "hidden_size": cfg["lm"]["dim"],
             "intermediate_size": cfg["lm"]["intermediate_size"],

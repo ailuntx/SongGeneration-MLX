@@ -127,6 +127,9 @@ class SongGenerationLM(nn.Module):
         self.update(tree_unflatten(list(weights.items())))
         mx.eval(self.parameters())
 
+    def apply_quantization(self, bits: int, group_size: int = 64) -> None:
+        nn.quantize(self, group_size=group_size, bits=bits)
+
     def _pad_2d(self, x: mx.array, max_len: int, pad_id: int) -> mx.array:
         width = x.shape[1]
         if width > max_len:
@@ -297,6 +300,9 @@ def load_model(model_dir: str | Path) -> tuple[SongGenerationLM, Qwen2Tokenizer,
     tokenizer = Qwen2Tokenizer.from_pretrained(model_dir / "qwen2_tokenizer")
     tokenizer.add_tokens(add_token_list, special_tokens=True)
     model = SongGenerationLM(cfg, add_token_list)
+    quantization = data.get("quantization")
+    if quantization:
+        model.apply_quantization(bits=int(quantization["bits"]), group_size=int(quantization.get("group_size", 64)))
     model.load_weights_file(model_dir / "model.safetensors")
     return model, tokenizer, data
 
