@@ -6,6 +6,11 @@ This repository targets the heavy autoregressive `audiolm` token generator in
 SongGeneration-v2. The audio decoder is still bridged through the official
 PyTorch Flow1dVAE / separate tokenizer path.
 
+The official SongGeneration source tree is vendored under
+`third_party/SongGeneration` so token decoding and upstream reference code live
+in the same repository. Model checkpoints and runtime assets are still external
+and must be downloaded separately.
+
 ## Status
 
 - `songgeneration_v2_medium` and `songgeneration_v2_large` official PyTorch/MPS baselines have been inspected locally.
@@ -96,12 +101,13 @@ python scripts/shard_safetensors.py \
 
 ## Decode Tokens With Official Bridge
 
-The bridge still needs the official SongGeneration checkout and runtime assets:
+The bridge uses the vendored official source in `third_party/SongGeneration` by
+default. Download the official runtime assets and checkpoint config/weights into
+that tree, or pass `--ckpt-path` explicitly.
 
 ```bash
 PYTORCH_ENABLE_MPS_FALLBACK=1 SONGGEN_DEVICE=mps \
 .venv/bin/python scripts/decode_tokens_official.py \
-  --repo /path/to/SongGeneration \
   --ckpt-path /path/to/SongGeneration/songgeneration_v2_medium \
   --tokens ./tokens_2s.npz \
   --output ./output_2s.flac \

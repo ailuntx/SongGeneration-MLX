@@ -5,3 +5,8 @@ runs/
 models/
 *.npz
 *.flac
+third_party/SongGeneration/runtime/
+third_party/SongGeneration/ckpt
+third_party/SongGeneration/third_party
+third_party/SongGeneration/songgeneration_v2_*/
+third_party/SongGeneration/tmp/

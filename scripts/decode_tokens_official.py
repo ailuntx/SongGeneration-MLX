@@ -14,9 +14,10 @@ from omegaconf import OmegaConf
 
 
 def parse_args() -> argparse.Namespace:
+    default_repo = Path(__file__).resolve().parents[1] / "third_party" / "SongGeneration"
     parser = argparse.ArgumentParser(description="Decode MLX SongGeneration tokens with the official PyTorch decoder.")
-    parser.add_argument("--repo", required=True, help="Official SongGeneration checkout.")
-    parser.add_argument("--ckpt-path", required=True, help="Official checkpoint directory, e.g. songgeneration_v2_medium.")
+    parser.add_argument("--repo", default=str(default_repo), help="Official SongGeneration checkout.")
+    parser.add_argument("--ckpt-path", help="Official checkpoint directory, e.g. songgeneration_v2_medium.")
     parser.add_argument("--tokens", required=True, help="Token .npz produced by songgeneration_mlx.cli.")
     parser.add_argument("--output", required=True, help="Output FLAC/WAV path.")
     parser.add_argument("--device", default=os.environ.get("SONGGEN_DEVICE", "mps"))
@@ -36,6 +37,12 @@ def save_audio(path: Path, wav: torch.Tensor, sample_rate: int) -> None:
 def main() -> None:
     args = parse_args()
     repo = Path(args.repo).expanduser().resolve()
+    ckpt_path = Path(args.ckpt_path).expanduser().resolve() if args.ckpt_path else repo / "songgeneration_v2_medium"
+    if not (ckpt_path / "config.yaml").exists():
+        raise FileNotFoundError(
+            f"missing official checkpoint config: {ckpt_path / 'config.yaml'}; "
+            "download an official SongGeneration checkpoint and pass --ckpt-path"
+        )
     os.chdir(repo)
     sys.path.insert(0, str(repo))
     sys.path.insert(0, str(repo / "codeclm" / "tokenizer"))
@@ -49,7 +56,7 @@ def main() -> None:
     from codeclm.models.codeclm import CodecLM
 
     device = torch.device(args.device)
-    cfg = OmegaConf.load(Path(args.ckpt_path) / "config.yaml")
+    cfg = OmegaConf.load(ckpt_path / "config.yaml")
     cfg.runtime_device = str(device)
     cfg.mode = "inference"
 
