@@ -6,6 +6,8 @@ This repository targets the heavy autoregressive `audiolm` token generator in
 SongGeneration-v2. The audio decoder is still bridged through the official
 PyTorch Flow1dVAE / separate tokenizer path.
 
+HF Collection: https://huggingface.co/collections/mlx-community/songgeneration-v2-mlx-6a1bf9342dd0806419737229
+
 The official SongGeneration source tree is vendored under
 `third_party/SongGeneration` so token decoding and upstream reference code live
 in the same repository. Model checkpoints and runtime assets are still external
@@ -57,18 +59,18 @@ Pick one checkpoint:
 ```bash
 HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-medium-4bit --local-dir ./models/SongGeneration-v2-medium-4bit
 HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-medium-8bit --local-dir ./models/SongGeneration-v2-medium-8bit
-HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-medium-bfloat16 --local-dir ./models/SongGeneration-v2-medium-bfloat16
+HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-medium-bf16 --local-dir ./models/SongGeneration-v2-medium-bf16
 HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-medium-fp32 --local-dir ./models/SongGeneration-v2-medium-fp32
 
 HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-large-4bit --local-dir ./models/SongGeneration-v2-large-4bit
 HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-large-8bit --local-dir ./models/SongGeneration-v2-large-8bit
-HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-large-bfloat16 --local-dir ./models/SongGeneration-v2-large-bfloat16
+HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-large-bf16 --local-dir ./models/SongGeneration-v2-large-bf16
 HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-large-fp32 --local-dir ./models/SongGeneration-v2-large-fp32
 ```
 
 Published checkpoints:
 
-| Variant | 4-bit | 8-bit | bfloat16 | fp32 |
+| Variant | 4-bit | 8-bit | bf16 | fp32 |
 |---|---|---|---|---|
 | v2-medium | yes | yes | yes | yes |
 | v2-large | yes | yes | yes | yes |
@@ -93,12 +95,12 @@ Published checkpoints:
 python scripts/convert_lm.py \
   --source /path/to/SongGeneration/songgeneration_v2_medium \
   --repo /path/to/SongGeneration \
-  --output ./models/SongGeneration-v2-medium-bfloat16 \
+  --output ./models/SongGeneration-v2-medium-bf16 \
   --variant v2-medium \
   --dtype bfloat16
 
 PYTHONPATH=. python scripts/quantize_lm.py \
-  --source ./models/SongGeneration-v2-medium-bfloat16 \
+  --source ./models/SongGeneration-v2-medium-bf16 \
   --output ./models/SongGeneration-v2-medium-4bit \
   --bits 4
 
