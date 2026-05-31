@@ -22,8 +22,8 @@ and must be downloaded separately.
 - The recent-token repetition penalty from the official sampler is required. Without it,
   long generations collapse into repeated tokens and decode close to silence.
 - Public upstream sources checked on 2026-05-31 did not provide downloadable
-  SongGeneration-v2-fast weights. Do not publish a fast MLX checkpoint until a
-  real upstream fast checkpoint is available.
+  SongGeneration-v2-fast weights. Fast is intentionally not published here until
+  a real upstream fast checkpoint is available.
 
 ## Current Validation
 
@@ -47,6 +47,7 @@ git clone https://github.com/ailuntx/SongGeneration-MLX.git
 cd SongGeneration-MLX
 python -m venv .venv
 .venv/bin/pip install -e .
+.venv/bin/pip install -U huggingface_hub hf_transfer
 ```
 
 ## Download MLX Weights
@@ -54,16 +55,24 @@ python -m venv .venv
 Pick one checkpoint:
 
 ```bash
-hf download mlx-community/SongGeneration-v2-medium-4bit --local-dir ./models/SongGeneration-v2-medium-4bit
-hf download mlx-community/SongGeneration-v2-medium-8bit --local-dir ./models/SongGeneration-v2-medium-8bit
-hf download mlx-community/SongGeneration-v2-medium-bfloat16 --local-dir ./models/SongGeneration-v2-medium-bfloat16
-hf download mlx-community/SongGeneration-v2-medium-fp32 --local-dir ./models/SongGeneration-v2-medium-fp32
+HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-medium-4bit --local-dir ./models/SongGeneration-v2-medium-4bit
+HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-medium-8bit --local-dir ./models/SongGeneration-v2-medium-8bit
+HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-medium-bfloat16 --local-dir ./models/SongGeneration-v2-medium-bfloat16
+HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-medium-fp32 --local-dir ./models/SongGeneration-v2-medium-fp32
 
-hf download mlx-community/SongGeneration-v2-large-4bit --local-dir ./models/SongGeneration-v2-large-4bit
-hf download mlx-community/SongGeneration-v2-large-8bit --local-dir ./models/SongGeneration-v2-large-8bit
-hf download mlx-community/SongGeneration-v2-large-bfloat16 --local-dir ./models/SongGeneration-v2-large-bfloat16
-hf download mlx-community/SongGeneration-v2-large-fp32 --local-dir ./models/SongGeneration-v2-large-fp32
+HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-large-4bit --local-dir ./models/SongGeneration-v2-large-4bit
+HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-large-8bit --local-dir ./models/SongGeneration-v2-large-8bit
+HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-large-bfloat16 --local-dir ./models/SongGeneration-v2-large-bfloat16
+HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-large-fp32 --local-dir ./models/SongGeneration-v2-large-fp32
 ```
+
+Published checkpoints:
+
+| Variant | 4-bit | 8-bit | bfloat16 | fp32 |
+|---|---|---|---|---|
+| v2-medium | yes | yes | yes | yes |
+| v2-large | yes | yes | yes | yes |
+| v2-fast | pending upstream weights | pending upstream weights | pending upstream weights | pending upstream weights |
 
 ## Generate Tokens
 
@@ -118,7 +127,7 @@ python -m venv .venv-decoder
 Download the official runtime assets into the vendored source tree:
 
 ```bash
-hf download tencent/SongGeneration \
+HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download tencent/SongGeneration \
   --include "runtime/*" \
   --local-dir ./third_party/SongGeneration
 ```
@@ -143,4 +152,36 @@ PYTORCH_ENABLE_MPS_FALLBACK=1 SONGGEN_DEVICE=mps \
   --tokens ./tokens_2s.npz \
   --output ./output_2s.flac \
   --device mps
+```
+
+## Limitations
+
+- The `audiolm` token generator is MLX.
+- The final audio decoder is still the official PyTorch bridge.
+- The bridge needs official `runtime/` assets, but it does not need the
+  original SongGeneration LM `model.pt` when `--mlx-model` is used.
+- Fast checkpoints are not published because upstream fast weights were not
+  available in the public release checked on 2026-05-31.
+
+## License
+
+License follows the upstream SongGeneration release. Check the official model
+card and repository for the authoritative model license.
+
+## Citation
+
+```bibtex
+@misc{songgeneration-mlx,
+  title  = {SongGeneration-MLX: Apple MLX port of SongGeneration},
+  author = {ailuntx},
+  year   = {2026},
+  url    = {https://github.com/ailuntx/SongGeneration-MLX},
+}
+
+@article{lei2025levo,
+  title   = {LeVo: High-Quality Song Generation with Multi-Preference Alignment},
+  author  = {Lei, Shun and Xu, Yaoxun and Lin, Zhiwei and Zhang, Huaicheng and Tan, Wei and Chen, Hangting and Yu, Jianwei and Zhang, Yixuan and Yang, Chenyu and Zhu, Haina and Wang, Shuai and Wu, Zhiyong and Yu, Dong},
+  journal = {arXiv preprint arXiv:2506.07520},
+  year    = {2025},
+}
 ```
