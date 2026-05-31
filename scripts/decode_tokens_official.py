@@ -18,11 +18,30 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Decode MLX SongGeneration tokens with the official PyTorch decoder.")
     parser.add_argument("--repo", default=str(default_repo), help="Official SongGeneration checkout.")
     parser.add_argument("--ckpt-path", help="Official checkpoint directory, e.g. songgeneration_v2_medium.")
+    parser.add_argument("--mlx-model", help="MLX checkpoint directory containing config.official.yaml.")
     parser.add_argument("--tokens", required=True, help="Token .npz produced by songgeneration_mlx.cli.")
     parser.add_argument("--output", required=True, help="Output FLAC/WAV path.")
     parser.add_argument("--device", default=os.environ.get("SONGGEN_DEVICE", "mps"))
     parser.add_argument("--gen-type", default="mixed", choices=["mixed", "vocal", "bgm"])
     return parser.parse_args()
+
+
+def resolve_existing(repo: Path, value: str) -> str:
+    if not value.startswith("./"):
+        return value
+    rel = value[2:]
+    for base in (repo, repo / "runtime"):
+        candidate = base / rel
+        if candidate.exists():
+            return str(candidate.resolve())
+    return str((repo / rel).resolve())
+
+
+def resolve_tokenizer_checkpoint(repo: Path, value: str) -> str:
+    if "_" not in value:
+        return resolve_existing(repo, value)
+    prefix, path = value.split("_", 1)
+    return f"{prefix}_{resolve_existing(repo, path)}"
 
 
 def save_audio(path: Path, wav: torch.Tensor, sample_rate: int) -> None:
@@ -37,14 +56,21 @@ def save_audio(path: Path, wav: torch.Tensor, sample_rate: int) -> None:
 def main() -> None:
     args = parse_args()
     repo = Path(args.repo).expanduser().resolve()
-    ckpt_path = Path(args.ckpt_path).expanduser().resolve() if args.ckpt_path else repo / "songgeneration_v2_medium"
-    if not (ckpt_path / "config.yaml").exists():
+    if args.ckpt_path:
+        config_path = Path(args.ckpt_path).expanduser().resolve() / "config.yaml"
+    elif args.mlx_model:
+        config_path = Path(args.mlx_model).expanduser().resolve() / "config.official.yaml"
+    else:
+        config_path = repo / "songgeneration_v2_medium" / "config.yaml"
+    if not config_path.exists():
         raise FileNotFoundError(
-            f"missing official checkpoint config: {ckpt_path / 'config.yaml'}; "
-            "download an official SongGeneration checkpoint and pass --ckpt-path"
+            f"missing official config: {config_path}; "
+            "pass --mlx-model for an MLX checkpoint or --ckpt-path for an official checkpoint"
         )
     os.chdir(repo)
     sys.path.insert(0, str(repo))
+    sys.path.insert(0, str(repo / "runtime"))
+    sys.path.insert(0, str(repo / "runtime" / "third_party"))
     sys.path.insert(0, str(repo / "codeclm" / "tokenizer"))
     sys.path.insert(0, str(repo / "codeclm" / "tokenizer" / "Flow1dVAE"))
 
@@ -56,7 +82,10 @@ def main() -> None:
     from codeclm.models.codeclm import CodecLM
 
     device = torch.device(args.device)
-    cfg = OmegaConf.load(ckpt_path / "config.yaml")
+    cfg = OmegaConf.load(config_path)
+    cfg.audio_tokenizer_checkpoint_sep = resolve_tokenizer_checkpoint(repo, cfg.audio_tokenizer_checkpoint_sep)
+    cfg.vae_config = resolve_existing(repo, cfg.vae_config)
+    cfg.vae_model = resolve_existing(repo, cfg.vae_model)
     cfg.runtime_device = str(device)
     cfg.mode = "inference"
 

@@ -99,16 +99,47 @@ python scripts/shard_safetensors.py \
   --remove-source
 ```
 
+## Prepare Official Decoder Runtime
+
+The MLX runtime generates discrete song tokens. FLAC decoding still uses the
+official PyTorch Flow1dVAE / separate-tokenizer runtime.
+
+Install the official decoder dependencies in a PyTorch environment:
+
+```bash
+python -m venv .venv-decoder
+.venv-decoder/bin/pip install -U pip
+.venv-decoder/bin/pip install \
+  -r third_party/SongGeneration/requirements.txt \
+  -r third_party/SongGeneration/requirements_nodeps.txt \
+  soundfile
+```
+
+Download the official runtime assets into the vendored source tree:
+
+```bash
+hf download tencent/SongGeneration \
+  --include "runtime/*" \
+  --local-dir ./third_party/SongGeneration
+```
+
+If the runtime is already available elsewhere, a symlink is enough:
+
+```bash
+ln -sfn /path/to/SongGeneration/runtime ./third_party/SongGeneration/runtime
+```
+
 ## Decode Tokens With Official Bridge
 
 The bridge uses the vendored official source in `third_party/SongGeneration` by
-default. Download the official runtime assets and checkpoint config/weights into
-that tree, or pass `--ckpt-path` explicitly.
+default. When `--mlx-model` is provided, it reads `config.official.yaml` from the
+MLX checkpoint, so the original SongGeneration `model.pt` is not needed for
+decoding.
 
 ```bash
 PYTORCH_ENABLE_MPS_FALLBACK=1 SONGGEN_DEVICE=mps \
-.venv/bin/python scripts/decode_tokens_official.py \
-  --ckpt-path /path/to/SongGeneration/songgeneration_v2_medium \
+.venv-decoder/bin/python scripts/decode_tokens_official.py \
+  --mlx-model ./models/SongGeneration-v2-medium-4bit \
   --tokens ./tokens_2s.npz \
   --output ./output_2s.flac \
   --device mps
