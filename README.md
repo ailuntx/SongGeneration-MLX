@@ -57,6 +57,9 @@ python -m venv .venv
 Pick one checkpoint:
 
 ```bash
+HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-medium --local-dir ./models/SongGeneration-v2-medium
+HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-large --local-dir ./models/SongGeneration-v2-large
+
 HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-medium-4bit --local-dir ./models/SongGeneration-v2-medium-4bit
 HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-medium-8bit --local-dir ./models/SongGeneration-v2-medium-8bit
 HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-medium-bf16 --local-dir ./models/SongGeneration-v2-medium-bf16
@@ -68,19 +71,20 @@ HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v
 HF_HUB_ENABLE_HF_TRANSFER=1 .venv/bin/hf download mlx-community/SongGeneration-v2-large-fp32 --local-dir ./models/SongGeneration-v2-large-fp32
 ```
 
-Published checkpoints:
+Default checkpoints are bf16 and are equivalent to the explicit `*-bf16`
+repositories. Published checkpoints:
 
-| Variant | 4-bit | 8-bit | bf16 | fp32 |
-|---|---|---|---|---|
-| v2-medium | yes | yes | yes | yes |
-| v2-large | yes | yes | yes | yes |
-| v2-fast | pending upstream weights | pending upstream weights | pending upstream weights | pending upstream weights |
+| Variant | default | 4-bit | 8-bit | bf16 | fp32 |
+|---|---|---|---|---|---|
+| v2-medium | bf16 | yes | yes | yes | yes |
+| v2-large | bf16 | yes | yes | yes | yes |
+| v2-fast | pending upstream weights | pending upstream weights | pending upstream weights | pending upstream weights | pending upstream weights |
 
 ## Generate Tokens
 
 ```bash
 .venv/bin/python -m songgeneration_mlx.cli \
-  --model ./models/SongGeneration-v2-medium-4bit \
+  --model ./models/SongGeneration-v2-medium \
   --lyrics "[verse] Hello from MLX. [chorus] Sing it again." \
   --description "Pop, female vocal, bright production, [Musicality-medium]." \
   --duration 2 \
@@ -150,7 +154,7 @@ decoding.
 ```bash
 PYTORCH_ENABLE_MPS_FALLBACK=1 SONGGEN_DEVICE=mps \
 .venv-decoder/bin/python scripts/decode_tokens_official.py \
-  --mlx-model ./models/SongGeneration-v2-medium-4bit \
+  --mlx-model ./models/SongGeneration-v2-medium \
   --tokens ./tokens_2s.npz \
   --output ./output_2s.flac \
   --device mps
